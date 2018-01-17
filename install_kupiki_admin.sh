@@ -48,7 +48,7 @@ execute_command() {
 # ***************************
 
 # Install packages
-apt-get install -y build-essential libfontconfig1
+apt-get install -y build-essential libfontconfig1 curl apt-transport-https
 # Install nodejs / npm
 #curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
 
@@ -71,17 +71,17 @@ apt-mark hold phantomjs
 adduser --disabled-password --gecos "" kupiki
 # Clone Kupiki-Hotspot-Admin project
 cd /home/kupiki
-git clone https://github.com/pihomeserver/Kupiki-Hotspot-Admin.git
-chown -R kupiki:kupiki Kupiki-Hotspot-Admin
+git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Backend.git
+chown -R kupiki:kupiki Kupiki-Hotspot-Admin-Backend
 # Start packages installation with npm
 # cd Kupiki-Hotspot-Admin
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && export NODE_ENV= && npm install"
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && export NODE_ENV= && npm install"
 # Rebuild node-sass for Raspberry Pi
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && npm rebuild node-sass"
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && npm rebuild node-sass"
 # Configure database connection
 
 # Build project
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && gulp build"
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && gulp build"
 # Install PM2
 npm install -g pm2
 # Configure startup of Kupiki Admin
@@ -96,11 +96,11 @@ module.exports = {
     }
   }]
 }
-" > /home/kupiki/Kupiki-Hotspot-Admin/ecosystem.config.js
-chmod 666 /home/kupiki/Kupiki-Hotspot-Admin/ecosystem.config.js
-chown kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin/ecosystem.config.js
+" > /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
+chmod 666 /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
+chown kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
 # Start interface via PM2
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 start ecosystem.config.js --env production"
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start ecosystem.config.js --env production"
 su - kupiki -c "cd /home/kupiki && pm2 save"
 # Add server as a service
 su - kupiki -c "pm2 startup systemd"
