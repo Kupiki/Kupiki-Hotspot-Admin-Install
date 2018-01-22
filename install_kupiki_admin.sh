@@ -72,7 +72,7 @@ adduser --disabled-password --gecos "" kupiki
 # Clone Kupiki-Hotspot-Admin project
 cd /home/kupiki
 git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Backend.git
-chown -R kupiki:kupiki Kupiki-Hotspot-Admin-Backend
+chown -R kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Backend
 # Start packages installation with npm
 # cd Kupiki-Hotspot-Admin
 su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && export NODE_ENV= && npm install"
@@ -83,24 +83,71 @@ su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && npm rebuild node
 # Build project
 su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && gulp build"
 # Install PM2
-npm install -g pm2
+#npm install -g pm2
 # Configure startup of Kupiki Admin
-echo "
-module.exports = {
-  apps : [{
-    name   : \"Kupiki\",
-    script : \"./dist/server/index.js\",
-    \"env_production\" : {
-	\"PORT\": 8080,
-	\"NODE_ENV\": \"production\"
-    }
-  }]
-}
-" > /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
-chmod 666 /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
-chown kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
+#echo "
+#module.exports = {
+#  apps : [{
+#    name   : \"KupikiBackend\",
+#    script : \"./dist/src/index.js\",
+#    \"env_production\" : {
+#	\"PORT\": 4000,
+#	\"NODE_ENV\": \"production\"
+#    }
+#  }]
+#}
+#" > /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
+#chmod 666 /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
+#chown kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Backend/ecosystem.config.js
 # Start interface via PM2
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start ecosystem.config.js --env production"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && gulp serve:dist"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start ecosystem.config.js --env production"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 list"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 show 0"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 restart 0"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start npm -- run --env production"
+
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start --name backend npm -- start"
+
+git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Frontend.git
+chown -R kupiki:kupiki Kupiki-Hotspot-Admin-Frontend
+# Start packages installation with npm
+# cd Kupiki-Hotspot-Admin
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && export NODE_ENV= && npm install"
+# Rebuild node-sass for Raspberry Pi
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && npm rebuild node-sass"
+echo "
+{
+  "presets": [
+    ["react"], ["env"]
+  ],
+  "plugins": ["transform-object-rest-spread"]
+}
+" > /home/kupiki/Kupiki-Hotspot-Admin-Frontend/.babelrc
+
+# Build project
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && npm run-script build"
+
+# Configure startup of Kupiki Admin
+#echo "
+#module.exports = {
+#  apps : [{
+#    name   : \"KupikiFrontend\",
+#    script : \"./dist/src/index.js\",
+#    \"env_production\" : {
+#	\"PORT\": 8080,
+#	\"NODE_ENV\": \"production\"
+#    }
+#  }]
+#}
+#" > /home/kupiki/Kupiki-Hotspot-Admin-Frontend/ecosystem.config.js
+#chmod 666 /home/kupiki/Kupiki-Hotspot-Admin-Frontend/ecosystem.config.js
+#chown kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Frontend/ecosystem.config.js
+# Start interface via PM2
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && pm2 start ecosystem.config.js --env production"
+
+su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && HOST='`ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`' pm2 start --name frontend npm -- start"
+
 su - kupiki -c "cd /home/kupiki && pm2 save"
 # Add server as a service
 su - kupiki -c "pm2 startup systemd"
@@ -119,8 +166,8 @@ mkdir /etc/kupiki
 chmod 700 /etc/kupiki
 
 cd /root
-git clone https://github.com/pihomeserver/Kupiki-Hotspot-Admin-Script.git
-cp /root/Kupiki-Hotspot-Admin-Script/kupiki.sh /etc/kupiki/
+git clone https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend-Script.git
+cp /root/Kupiki-Hotspot-Admin-Backend-Script/kupiki.sh /etc/kupiki/
 chmod 700 /etc/kupiki/kupiki.sh
 
 # remove all lines for kupiki in /etc/sudoers
@@ -130,37 +177,34 @@ echo '
 kupiki ALL=(ALL) NOPASSWD:/etc/kupiki/kupiki.sh
 ' >> /etc/sudoers
 
-echo '
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 stop 0"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git pull"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git fetch --all"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git reset --hard origin/master"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && export NODE_ENV= && npm install"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && gulp build"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 start 0"
-
-cd /root/Kupiki-Hotspot-Admin-Script/
-git pull
-cp /root/Kupiki-Hotspot-Admin-Script/kupiki.sh /etc/kupiki/
-chmod 700 /etc/kupiki/kupiki.sh
-
-' > /root/updateKupiki.sh
-chmod +x /root/updateKupiki.sh
+#echo '
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 stop 0"
+##su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git pull"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git fetch --all"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git reset --hard origin/master"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && export NODE_ENV= && npm install"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && gulp build"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 start 0"
+#
+#cd /root/Kupiki-Hotspot-Admin-Script/
+#git pull
+#cp /root/Kupiki-Hotspot-Admin-Script/kupiki.sh /etc/kupiki/
+#chmod 700 /etc/kupiki/kupiki.sh
+#
+#' > /root/updateKupiki.sh
+#chmod +x /root/updateKupiki.sh
 
 apt-get install -y freeradius-utils
 sed -i "s/^#LoadPlugin unixsock/LoadPlugin unixsock/" /etc/collectd/collectd.conf
-echo "
+echo '
 <Plugin unixsock>
         SocketFile "/var/run/collectd-unixsock"
         SocketGroup "collectd"
         SocketPerms "0660"
         DeleteSocket false
-</Plugin>" >> /etc/collectd/collectd.conf
+</Plugin>' >> /etc/collectd/collectd.conf
 
 service collectd restart
-
-exit 0
-
 
 # To reset local developments
 
@@ -171,3 +215,5 @@ exit 0
 #http://pm2.keymetrics.io/docs/tutorials/pm2-nginx-production-setup
 
 #https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-debian-8
+
+exit 0
