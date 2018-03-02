@@ -187,14 +187,6 @@ display_message "Make service executable"
 chmod -x /etc/systemd/system/pm2-kupiki.service
 check_returned_code $?
 
-# echo '
-# #!/bin/sh
-# /usr/bin/apt-get -qq -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" upgrade
-# ' > /home/kupiki/Kupiki-Hotspot-Admin/upgrade.sh
-
-# chown root:root /home/kupiki/Kupiki-Hotspot-Admin/upgrade.sh
-# chmod 700 /home/kupiki/Kupiki-Hotspot-Admin/upgrade.sh
-
 display_message "Creating backend script folder"
 mkdir /etc/kupiki && chmod 700 /etc/kupiki
 
