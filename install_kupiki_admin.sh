@@ -79,30 +79,37 @@ npm install -g gulp-cli node-gyp
 check_returned_code $?
 
 # Install PhantomJS for Raspberry Pi
-display_message "Checking we are installing on Raspbian via /etc/os-release"
-if [ $OS_RELEASE = "raspbian" ]; then
-    display_message "Getting PhantomJS for Raspberry Pi"
-    wget https://github.com/fg2it/phantomjs-on-raspberry/blob/master/rpi-2-3/wheezy-jessie/v2.1.1/phantomjs_2.1.1_armhf.deb?raw=true
-    check_returned_code $?
+#display_message "Checking we are installing on Raspbian via /etc/os-release"
+#if [ $OS_RELEASE = "raspbian" ]; then
+#    display_message "Getting PhantomJS for Raspberry Pi"
+#    wget https://github.com/fg2it/phantomjs-on-raspberry/blob/master/rpi-2-3/wheezy-jessie/v2.1.1/phantomjs_2.1.1_armhf.deb?raw=true
+#    check_returned_code $?
+#
+#    display_message "Renaming archive"
+#    mv "phantomjs_2.1.1_armhf.deb?raw=true" phantomjs_2.1.1_armhf.deb
+#    check_returned_code $?
+#
+#    display_message "Installing PhantomJS"
+#    dpkg -i phantomjs_2.1.1_armhf.deb
+#    check_returned_code $?
+#fi
 
-    display_message "Renaming archive"
-    mv "phantomjs_2.1.1_armhf.deb?raw=true" phantomjs_2.1.1_armhf.deb
-    check_returned_code $?
+#display_message "Avoid next updates or upgrades of PhantomJS"
+#apt-mark hold phantomjs
+#check_returned_code $?
 
-    display_message "Installing PhantomJS"
-    dpkg -i phantomjs_2.1.1_armhf.deb
+
+id -u kupiki > /dev/null
+if [ $? -ne 0 ]; then
+    display_message "Create dedicated user kupiki"
+    adduser --disabled-password --gecos "" kupiki
     check_returned_code $?
 fi
 
-display_message "Avoid next updates or upgrades of PhantomJS"
-apt-mark hold phantomjs
-check_returned_code $?
-
-display_message "Create dedicated user kupiki"
-adduser --disabled-password --gecos "" kupiki
-check_returned_code $?
-
 display_message "Cloning Backend project"
+if [ -d "/home/kupiki/Kupiki-Hotspot-Admin-Backend" ]; then
+    rm -rf /home/kupiki/Kupiki-Hotspot-Admin-Backend
+fi
 cd /home/kupiki && git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Backend.git
 check_returned_code $?
 display_message "Changing rights of backend folder"
@@ -113,9 +120,9 @@ display_message "Starting packages installation with npm"
 su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && export NODE_ENV= && npm install"
 check_returned_code $?
 
-display_message "Rebuilding node-sass for Raspberry Pi"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && npm rebuild node-sass"
-check_returned_code $?
+#display_message "Rebuilding node-sass for Raspberry Pi"
+#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && npm rebuild node-sass"
+#check_returned_code $?
 
 display_message "Installing PM2"
 npm install -g pm2
@@ -129,7 +136,7 @@ check_returned_code $?
 #su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start npm -- run --env production"
 
 display_message "Configuring IP of Kupiki Admin Backend"
-sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config/environment/development.js
+sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config.json
 check_returned_code $?
 
 display_message "Starting backend using PM2"
@@ -137,6 +144,9 @@ su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start --name
 check_returned_code $?
 
 display_message "Cloning Frontend project"
+if [ -d "/home/kupiki/Kupiki-Hotspot-Admin-Frontend" ]; then
+    rm -rf /home/kupiki/Kupiki-Hotspot-Admin-Frontend
+fi
 cd /home/kupiki && git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Frontend.git
 check_returned_code $?
 
@@ -249,6 +259,10 @@ check_returned_code $?
 
 display_message "Restarting Collectd"
 service collectd restart
+check_returned_code $?
+
+display_message "Restarting Mysql"
+service mysql restart
 check_returned_code $?
 
 # To reset local developments
