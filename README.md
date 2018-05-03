@@ -1,3 +1,5 @@
+[![Slack](https://img.shields.io/badge/slack-kupiki--tools-blue.svg)](https://kupiki-tools.slack.com) ![Stars](https://img.shields.io/github/stars/kupiki/kupiki-hotspot-admin-install.svg?style=social&label=Star) [![Donate](https://img.shields.io/badge/%24-Donate-brightgreen.svg)](https://paypal.me/PiHomeServer)
+
 What is Kupiki Hotspot Admin
 ==================
 
@@ -44,13 +46,17 @@ chmod +x install_kupiki_admin.sh && ./install_kupiki_admin.sh
 Screenshots
 =======
 
-<h4 align="center">Login screen</h4>
-<img src="http://www.pihomeserver.fr/hosting/kupiki/login.png">
-<h4 align="center">Dashboard</h4>
-<img src="http://www.pihomeserver.fr/hosting/kupiki/dashboard.png">
-<h4 align="center">Basic configuration</h4>
-<img src="http://www.pihomeserver.fr/hosting/kupiki/simple.png">
-<h4 align="center">Advanced configuration</h4>
-<img src="http://www.pihomeserver.fr/hosting/kupiki/advanced.png">
-<h4 align="center">Hotspot management</h4>
-<img src="http://www.pihomeserver.fr/hosting/kupiki/mgmt.png">
+#### Login screen
+![login](http://www.pihomeserver.fr/hosting/kupiki/login.png)
+
+#### Dashboard
+![dashboard](http://www.pihomeserver.fr/hosting/kupiki/dashboard.png)
+
+#### Basic configuration
+![simple](http://www.pihomeserver.fr/hosting/kupiki/simple.png)
+
+#### Advanced configuration
+![advanced](http://www.pihomeserver.fr/hosting/kupiki/advanced.png)
+
+#### Hotspot management
+![mgmt](http://www.pihomeserver.fr/hosting/kupiki/mgmt.png)
