@@ -136,7 +136,8 @@ check_returned_code $?
 #su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start npm -- run --env production"
 
 display_message "Configuring IP of Kupiki Admin Backend"
-sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config.json
+#sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config.json
+sed -i "/\"client\":/{n;s/\(.*host.*: \"\).*/\1$MY_IP\",/}" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config.json
 check_returned_code $?
 
 display_message "Starting backend using PM2"
@@ -174,10 +175,13 @@ su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && npm rebuild nod
 check_returned_code $?
 
 display_message "Configuring IP for the backend access"
-sed -i "s/127.0.0.1/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
-sed -i "s/127.0.0.1/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
-sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
-sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
+#sed -i "s/127.0.0.1/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
+#sed -i "s/127.0.0.1/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
+sed -i "s/\(.*server_url.*\/\/\).*/\1$MY_IP\",/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
+sed -i "s/\(.*server_url.*\/\/\).*/\1$MY_IP\",/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
+#sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
+#sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
+
 check_returned_code $?
 
 display_message "Starting interface via PM2"
