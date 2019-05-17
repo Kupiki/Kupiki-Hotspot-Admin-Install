@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
 
-NODE_VERSION=node_8.x
-DISTRO="$(lsb_release -s -c)"
-
-# Name of the log file
-LOGNAME="pihotspot_admin.log"
-# Path where the logfile will be stored
-# be sure to add a / at the end of the path
-LOGPATH="/var/log/"
-
-MY_IP=`ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`
-OS_RELEASE=`cat /etc/os-release | grep ^ID= | awk -F '=' '{print $2}'`
-
 check_returned_code() {
     RETURNED_CODE=$@
     if [ $RETURNED_CODE -ne 0 ]; then
@@ -30,254 +18,150 @@ display_message() {
     echo "::: $MESSAGE" >> $LOGPATH$LOGNAME
 }
 
-execute_command() {
-    display_message "$3"
-    COMMAND="$1 >> $LOGPATH$LOGNAME 2>&1"
-    eval $COMMAND
-    COMMAND_RESULT=$?
-    if [ "$2" != "false" ]; then
-        check_returned_code $COMMAND_RESULT
-    fi
-}
+MY_IP=`ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`
 
-# ***************************
-#
-# For collectd
-# apt-get install -y collectd-utils
-# Activate unix-socket plugin for collectd
-# Activate df plugin for collectd
-#
-# ***************************
+CLIENT_PROTOCOL=http
+CLIENT_HOST=$MY_IP
+CLIENT_PORT=8080
+SERVER_PROTOCOL=http
+SERVER_HOST=$MY_IP
+SERVER_PORT=4000
 
-# Install packages
-display_message "Install default packages"
-apt-get install -y build-essential libfontconfig1 curl apt-transport-https
+FRONTEND_URL="--single-branch --branch v2.0-alpha https://github.com/Kupiki/Kupiki-Hotspot-Admin-Frontend.git"
+BACKEND_URL="--single-branch --branch v3.0-alpha https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend.git"
+BACKEND_SCRIPT_URL="--single-branch --branch v1.0-alpha https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend-Script.git"
+
+display_message "Cloning Kupiki Admin Frontend"
+cd $HOME
+git clone $FRONTEND_URL
 check_returned_code $?
 
-display_message "Get key for Node repository"
-curl --silent https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+display_message "Building Kupiki Admin Frontend image"
+cd Kupiki-Hotspot-Admin-Frontend
+docker build --build-arg CLIENT_HOST=$CLIENT_HOST --build-arg CLIENT_PORT=$CLIENT_PORT --build-arg SERVER_HOST=$SERVER_HOST --build-arg SERVER_PORT=$SERVER_PORT . -t admin-frontend
 check_returned_code $?
 
-display_message "Add source for Node package"
-echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list
+display_message "Creating Kupiki Admin Frontend service"
+cat > /etc/systemd/system/kupiki.admin.frontend.service << EOT
+[Unit]
+Description=Kupiki Administration Frontend
+Requires=docker.service
+After=docker.service mariadb.service
+
+[Service]
+ExecStart=/usr/bin/docker start \$(docker ps -f name=admin-frontend -q -a)
+ExecStop=/usr/bin/docker stop \$(docker ps -f name=admin-frontend -q -a)
+
+[Install]
+WantedBy=default.target
+EOT
+
+display_message "Activating Kupiki Admin Frontend service"
+chmod +x /etc/systemd/system/kupiki.admin.frontend.service
+check_returned_code $?
+/bin/systemctl enable /etc/systemd/system/kupiki.admin.frontend.service
 check_returned_code $?
 
-display_message "Add source for Node package"
-echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
+display_message "Starting Kupiki Admin Frontend container"
+/usr/bin/docker run -d -p $CLIENT_PORT:80 --name=admin-frontend admin-frontend
 check_returned_code $?
 
-display_message "Update repositories list (will add node repo)"
-apt-get update
+# display_message "Cleaning unwanted Docker images"
+# docker rmi $(docker images --filter dangling=true -q) --force
+# check_returned_code $?
+
+display_message "Cloning Kupiki Admin Backend"
+cd $HOME
+git clone $BACKEND_URL
 check_returned_code $?
 
-display_message "Installing Node"
-apt-get install -y nodejs
+display_message "Building Kupiki Admin Backend image"
+cd Kupiki-Hotspot-Admin-Backend
+docker build --build-arg CLIENT_HOST=$CLIENT_HOST --build-arg CLIENT_PORT=$CLIENT_PORT --build-arg SERVER_HOST=$SERVER_HOST --build-arg SERVER_PORT=$SERVER_PORT . -t admin-backend
 check_returned_code $?
 
-display_message "Installing gulp and CLI"
-npm install -g gulp-cli node-gyp
+display_message "Creating Kupiki Admin Backend service"
+cat > /etc/systemd/system/kupiki.admin.backend.service << EOT
+[Unit]
+Description=Kupiki Administration Backend
+Requires=docker.service
+After=docker.service mariadb.service
+
+[Service]
+ExecStart=/usr/bin/docker start \$(docker ps -f name=admin-backend -q -a)
+ExecStop=/usr/bin/docker stop \$(docker ps -f name=admin-backend -q -a)
+
+[Install]
+WantedBy=default.target
+EOT
+
+display_message "Activating Kupiki Admin Backend service"
+chmod +x /etc/systemd/system/kupiki.admin.backend.service
+check_returned_code $?
+/bin/systemctl enable /etc/systemd/system/kupiki.admin.backend.service
 check_returned_code $?
 
-# Install PhantomJS for Raspberry Pi
-#display_message "Checking we are installing on Raspbian via /etc/os-release"
-#if [ $OS_RELEASE = "raspbian" ]; then
-#    display_message "Getting PhantomJS for Raspberry Pi"
-#    wget https://github.com/fg2it/phantomjs-on-raspberry/blob/master/rpi-2-3/wheezy-jessie/v2.1.1/phantomjs_2.1.1_armhf.deb?raw=true
-#    check_returned_code $?
-#
-#    display_message "Renaming archive"
-#    mv "phantomjs_2.1.1_armhf.deb?raw=true" phantomjs_2.1.1_armhf.deb
-#    check_returned_code $?
-#
-#    display_message "Installing PhantomJS"
-#    dpkg -i phantomjs_2.1.1_armhf.deb
-#    check_returned_code $?
-#fi
-
-#display_message "Avoid next updates or upgrades of PhantomJS"
-#apt-mark hold phantomjs
-#check_returned_code $?
-
-
-id -u kupiki > /dev/null
-if [ $? -ne 0 ]; then
-    display_message "Create dedicated user kupiki"
-    adduser --disabled-password --gecos "" kupiki
-    check_returned_code $?
-fi
-
-display_message "Cloning Backend project"
-if [ -d "/home/kupiki/Kupiki-Hotspot-Admin-Backend" ]; then
-    rm -rf /home/kupiki/Kupiki-Hotspot-Admin-Backend
-fi
-cd /home/kupiki && git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Backend.git
-check_returned_code $?
-display_message "Changing rights of backend folder"
-chown -R kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Backend
+display_message "Starting Kupiki Admin Backend container"
+/usr/bin/docker run -d -p $SERVER_PORT:$SERVER_PORT --network="host" --name=admin-backend admin-backend
 check_returned_code $?
 
-display_message "Starting packages installation with npm"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && export NODE_ENV= && npm install"
+# display_message "Cleaning unwanted Docker images"
+# docker rmi $(docker images --filter dangling=true -q) --force
+# check_returned_code $?
+
+display_message "Cloning Kupiki Admin Backend Script"
+cd $HOME
+git clone $BACKEND_SCRIPT_URL
 check_returned_code $?
 
-#display_message "Rebuilding node-sass for Raspberry Pi"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && npm rebuild node-sass"
-#check_returned_code $?
+display_message "Creating Kupiki Admin rabbitmq service"
+cat > /etc/systemd/system/kupiki.admin.rabbitmq.service << EOT
+[Unit]
+Description=Kupiki Administration RabbitMQ
+Requires=docker.service
+After=docker.service mariadb.service
 
-display_message "Installing PM2"
-npm install -g pm2
+[Service]
+ExecStart=/usr/bin/docker start \$(docker ps -f name=rabbitmq -q -a)
+ExecStop=/usr/bin/docker stop \$(docker ps -f name=rabbitmq -q -a)
+
+[Install]
+WantedBy=default.target
+EOT
+
+display_message "Activating Kupiki Admin rabbitmq service"
+chmod +x /etc/systemd/system/kupiki.admin.rabbitmq.service
+check_returned_code $?
+/bin/systemctl enable /etc/systemd/system/kupiki.admin.rabbitmq.service
 check_returned_code $?
 
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && gulp serve:dist"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start ecosystem.config.js --env production"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 list"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 show 0"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 restart 0"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start npm -- run --env production"
-
-display_message "Configuring IP of Kupiki Admin Backend"
-#sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config.json
-sed -i "/\"client\":/{n;s/\(.*host.*: \"\).*/\1$MY_IP\",/}" /home/kupiki/Kupiki-Hotspot-Admin-Backend/src/config.json
+display_message "Starting RabbitMQ"
+/usr/bin/docker run -d -p 5672:5672 -p 15672:15672 --name=rabbitmq rabbitmq:management-alpine
 check_returned_code $?
 
-display_message "Starting backend using PM2"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Backend && pm2 start --name backend npm -- start"
+display_message "Copy of Kupiki Admin Script"
+cp $HOME/Kupiki-Hotspot-Admin-Backend-Script/Script/kupikiListener.py /etc/kupiki/kupikiListener.py
 check_returned_code $?
 
-display_message "Cloning Frontend project"
-if [ -d "/home/kupiki/Kupiki-Hotspot-Admin-Frontend" ]; then
-    rm -rf /home/kupiki/Kupiki-Hotspot-Admin-Frontend
-fi
-cd /home/kupiki && git clone https://github.com/kupiki/Kupiki-Hotspot-Admin-Frontend.git
+display_message "Creating Kupiki Admin Script service"
+cat > /etc/systemd/system/kupiki.admin.script.service << EOT
+[Unit]
+Description=Kupiki Administration Script
+After=kupiki.admin.rabbitmq.service
+
+[Service]
+ExecStart=/usr/bin/python /etc/kupiki/kupikiListener.py
+
+[Install]
+WantedBy=default.target
+EOT
+
+display_message "Activating Kupiki Admin script service"
+chmod +x /etc/systemd/system/kupiki.admin.script.service
+check_returned_code $?
+/bin/systemctl enable /etc/systemd/system/kupiki.admin.script.service
 check_returned_code $?
 
-display_message "Creating .babelrc file to allow compilation"
-echo '
-{
-  "presets": [
-    ["react"], ["env"]
-  ],
-  "plugins": ["transform-object-rest-spread"]
-}
-' > /home/kupiki/Kupiki-Hotspot-Admin-Frontend/.babelrc
-check_returned_code $?
-
-display_message "Changing files rights"
-chown -R kupiki:kupiki /home/kupiki/Kupiki-Hotspot-Admin-Frontend
-check_returned_code $?
-
-display_message "Start packages installation with npm"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && export NODE_ENV= && npm install"
-check_returned_code $?
-
-display_message "Rebuilding node-sass for Raspberry Pi"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && npm rebuild node-sass"
-check_returned_code $?
-
-display_message "Configuring IP for the backend access"
-#sed -i "s/127.0.0.1/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
-#sed -i "s/127.0.0.1/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
-sed -i "s/\(.*server_url.*\/\/\).*/\1$MY_IP\",/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
-sed -i "s/\(.*server_url.*\/\/\).*/\1$MY_IP\",/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
-#sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.dev.json
-#sed -i "s/192.168.10.160/$MY_IP/g" /home/kupiki/Kupiki-Hotspot-Admin-Frontend/config/config.prod.json
-
-check_returned_code $?
-
-display_message "Starting interface via PM2"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin-Frontend && HOST='`ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`' pm2 start --name frontend npm -- start"
-check_returned_code $?
-
-display_message "Saving PM2 configuration"
-su - kupiki -c "cd /home/kupiki && pm2 save"
-check_returned_code $?
-
-display_message "Adding server as a service"
-su - kupiki -c "pm2 startup systemd"
-#check_returned_code $?
-
-display_message "Generating service files for PM2"
-/usr/bin/pm2 startup systemd -u kupiki --hp /home/kupiki
-check_returned_code $?
-
-display_message "Make service executable"
-chmod -x /etc/systemd/system/pm2-kupiki.service
-check_returned_code $?
-
-display_message "Creating backend script folder"
-mkdir /etc/kupiki && chmod 700 /etc/kupiki
-
-display_message "Getting backend script"
-cd /root && git clone https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend-Script.git
-check_returned_code $?
-
-display_message "Cloning backend script in /etc/kupiki"
-cp /root/Kupiki-Hotspot-Admin-Backend-Script/kupiki.sh /etc/kupiki/
-check_returned_code $?
-chmod 700 /etc/kupiki/kupiki.sh
-check_returned_code $?
-
-display_message "Removing all lines for kupiki in /etc/sudoers"
-sed -i 's/^kupiki ALL.*//g' /etc/sudoers
-check_returned_code $?
-
-display_message "Updating /etc/sudoers"
-echo '
-kupiki ALL=(ALL) NOPASSWD:/etc/kupiki/kupiki.sh
-' >> /etc/sudoers
-check_returned_code $?
-
-display_message "Creating the upgrade script for Kupiki Hotspot Admin"
-echo '
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 stop 0"
-#su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git pull"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git fetch --all"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && git reset --hard origin/master"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && export NODE_ENV= && npm install"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && gulp build"
-su - kupiki -c "cd /home/kupiki/Kupiki-Hotspot-Admin && pm2 start 0"
-
-cd /root/Kupiki-Hotspot-Admin-Script/
-git pull
-cp /root/Kupiki-Hotspot-Admin-Script/kupiki.sh /etc/kupiki/
-chmod 700 /etc/kupiki/kupiki.sh
-
-' > /root/updateKupiki.sh
-check_returned_code $?
-chmod +x /root/updateKupiki.sh
-check_returned_code $?
-
-display_message "Installing some freeradius tools"
-apt-get install -y freeradius-utils
-check_returned_code $?
-
-display_message "Adding Collectd plugin"
-sed -i "s/^#LoadPlugin unixsock/LoadPlugin unixsock/" /etc/collectd/collectd.conf
-check_returned_code $?
-
-echo '
-<Plugin unixsock>
-        SocketFile "/var/run/collectd-unixsock"
-        SocketGroup "collectd"
-        SocketPerms "0660"
-        DeleteSocket false
-</Plugin>' >> /etc/collectd/collectd.conf
-check_returned_code $?
-
-display_message "Restarting Collectd"
-service collectd restart
-check_returned_code $?
-
-display_message "Restarting Mysql"
-service mysql restart
-check_returned_code $?
-
-# To reset local developments
-#git fetch --all
-#git reset --hard origin/master
-
-# Use Nginx as a reverse proxy
-#http://pm2.keymetrics.io/docs/tutorials/pm2-nginx-production-setup
-#https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-debian-8
-
-exit 0
+display_message "Waiting for RabbitMQ to be ready"
+sleep 15
+/bin/systemctl start kupiki.admin.script.service
