@@ -45,15 +45,20 @@ display_message "Creating Kupiki Admin Frontend service"
 cat > /etc/systemd/system/kupiki.admin.frontend.service << EOT
 [Unit]
 Description=Kupiki Administration Frontend
+After=docker.service
 Requires=docker.service
-After=docker.service mariadb.service
+After=mariadb.service
+Requires=mariadb.service
 
 [Service]
-ExecStart=/usr/bin/docker start \$(docker ps -f name=admin-frontend -q -a)
-ExecStop=/usr/bin/docker stop \$(docker ps -f name=admin-frontend -q -a)
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=/usr/bin/docker stop -t 5 admin-frontend
+ExecStart=/usr/bin/docker start -a admin-frontend
+ExecStop=/usr/bin/docker stop -t 5 admin-frontend
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
 EOT
 
 display_message "Activating Kupiki Admin Frontend service"
@@ -84,15 +89,20 @@ display_message "Creating Kupiki Admin Backend service"
 cat > /etc/systemd/system/kupiki.admin.backend.service << EOT
 [Unit]
 Description=Kupiki Administration Backend
+After=docker.service
 Requires=docker.service
-After=docker.service mariadb.service
+After=mariadb.service
+Requires=mariadb.service
 
 [Service]
-ExecStart=/usr/bin/docker start \$(docker ps -f name=admin-backend -q -a)
-ExecStop=/usr/bin/docker stop \$(docker ps -f name=admin-backend -q -a)
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=/usr/bin/docker stop -t 5 admin-backend
+ExecStart=/usr/bin/docker start -a admin-backend
+ExecStop=/usr/bin/docker stop -t 5 admin-backend
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
 EOT
 
 display_message "Activating Kupiki Admin Backend service"
@@ -118,15 +128,18 @@ display_message "Creating Kupiki Admin rabbitmq service"
 cat > /etc/systemd/system/kupiki.admin.rabbitmq.service << EOT
 [Unit]
 Description=Kupiki Administration RabbitMQ
+After=docker.service
 Requires=docker.service
-After=docker.service mariadb.service
 
 [Service]
-ExecStart=/usr/bin/docker start \$(docker ps -f name=rabbitmq -q -a)
-ExecStop=/usr/bin/docker stop \$(docker ps -f name=rabbitmq -q -a)
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=/usr/bin/docker stop -t 5 rabbitmq
+ExecStart=/usr/bin/docker start -a rabbitmq
+ExecStop=/usr/bin/docker stop -t 5 rabbitmq
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
 EOT
 
 display_message "Activating Kupiki Admin rabbitmq service"
@@ -150,6 +163,9 @@ Description=Kupiki Administration Script
 After=kupiki.admin.rabbitmq.service
 
 [Service]
+Type=simple
+Restart=always
+RestartSec=20
 ExecStart=/usr/bin/python /etc/kupiki/kupikiListener.py
 
 [Install]
