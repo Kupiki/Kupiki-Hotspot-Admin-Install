@@ -27,9 +27,9 @@ SERVER_PROTOCOL=http
 SERVER_HOST=$MY_IP
 SERVER_PORT=4000
 
-FRONTEND_URL="--single-branch --branch v2.0-alpha https://github.com/Kupiki/Kupiki-Hotspot-Admin-Frontend.git"
-BACKEND_URL="--single-branch --branch v3.0-alpha https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend.git"
-BACKEND_SCRIPT_URL="--single-branch --branch v1.0-alpha https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend-Script.git"
+FRONTEND_URL="https://github.com/Kupiki/Kupiki-Hotspot-Admin-Frontend.git"
+BACKEND_URL="https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend.git"
+BACKEND_SCRIPT_URL="https://github.com/Kupiki/Kupiki-Hotspot-Admin-Backend-Script.git"
 
 display_message "Cloning Kupiki Admin Frontend"
 cd $HOME
